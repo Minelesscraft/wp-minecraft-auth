@@ -25,3 +25,6 @@ class wpmauth_auth {
 }
 
 add_action ( 'pre_get_posts', array ( 'wpmauth_auth', 'ms_auth' ) );
+
+//apply_filters( 'loginout', string $link )
+//apply_filters( 'login_url', string $login_url, string $redirect, bool $force_reauth )

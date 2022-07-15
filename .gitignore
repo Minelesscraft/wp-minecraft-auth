@@ -21,3 +21,5 @@ node_modules/
 *.log
 *.sql
 *.sqlite
+.vscode/sftp.json
+.ds_store
