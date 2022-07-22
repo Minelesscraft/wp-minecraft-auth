@@ -13,28 +13,86 @@
 // Prevent loadinng outside of Wordpress
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-// wpmauth_first_run
-// wpmauth_appname
-// wpmauth_client_id
-// wpmauth_client_secret
-// wpmauth_client_scope
-// wpmauth_authorization_url
-// wpmauth_token_endpoint_url
+class WPMAuth_Settings {
+    private $_plugin;
+    private $_data = array();
+    private $_dirty = false;
 
-class wpmauth_settings {
-    function __construct() {
-        if ( get_option( 'wpmauth_first_run' ) === false ) {
-            add_action( 'init', array( $this, 'defaults' ), 10 );
+    function __construct( $instance ) {
+        $this->_plugin = $instance;
+        $this->_data = get_option( 'wp_minecraft_auth', false );
+
+        if ( $this->_data === false ) {
+            $this->_defaults();
+            $this->save();
+        }
+
+        require_once WPMAUTH_PATH . 'includes/class.sub_array.php';
+
+        add_action( 'shutdown', array( $this, 'save') );
+        $this->_plugin->write_log( $this->_data );
+    }
+
+    function __isset( $key ) {
+        return isset( $this->_data[ sanitize_title( $key ) ] );
+    }
+
+    function __get( $key ) {
+        if ( ! array_key_exists( $key, $this->_data ) ) {
+            return null;
+        }
+
+        if ( is_array( $this->_data[ $key ] ) ) {
+            return new WPMAuth_SubArray( $this->_data[ $key ], $this->_dirty );
+        } else {
+            return $this->_data[ $key ];
         }
     }
 
-    function defaults() {
-        update_option( 'wpmauth_first_run', 1, false);
-        update_option( 'wpmauth_app_name', '', false);
-        update_option( 'wpmauth_client_id', '', false);
-        update_option( 'wpmauth_client_secret', '', false);
-        update_option( 'wpmauth_client_scope', 'XboxLive.signin offline_access', false);
-        update_option( 'wpmauth_authorization_url', 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize', false);
-        update_option( 'wpmauth_token_endpoint_url', 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token', false);
+    function __set( $key, $value ) {
+        if ( $value !== $this->_data[ $key ] ) {
+            $this->_data[ sanitize_key( $key ) ] = $value;
+            $this->_dirty = true;
+        }
+    }
+
+    function __unset( $key ) {
+        if ( isset( $this->_daya[ $key ] ) ) {
+            unset( $this->_data[$key] );
+            $this->_dirty = true;
+        }
+    }
+
+    function refresh() {
+        $this->_data = get_option( 'wp_minecraft_auth' );
+    }
+
+    function save() {
+        if ( $this->_dirty ) {
+            update_option( 'wp_minecraft_auth', $this->_data, false );
+            $this->_dirty = false;
+        }
+    }
+
+    private function _defaults() {
+        $defaults = array(
+            'first_run' => 1,
+            'debug' => 0,
+            'oauth' => array(
+                'client_id' => '',
+                'client_secret' => '',
+                'client_scope' => 'XboxLive.signin offline_access email profile openid',
+            ),
+            'endpoints' => array(
+                'authorization' => 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize',
+                'token' => 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
+                'xbl' => 'https://user.auth.xboxlive.com/user/authenticate',
+                'xsts' => 'https://xsts.auth.xboxlive.com/xsts/authorize',
+                'mc' => 'https://api.minecraftservices.com/authentication/login_with_xbox',
+            ),
+        );
+
+        $this->_data = $defaults;
+        $this->_dirty = true;
     }
 }
